@@ -1,0 +1,32 @@
+# Which fixup the driver actually picked, and where it came from
+# captured:   2026-09-20T19:19:42+01:00 on omarchy, kernel 7.2.5-3-omarchy
+# capture.sh: odd/omarchy-audio-upstream/evidence/capture.sh (re-runnable, read-only)
+# linux source: torvalds/linux master a10a019dd4c7c57bef6b8dda962c8881ad220af2 (https://raw.githubusercontent.com/torvalds/linux/a10a019dd4c7c57bef6b8dda962c8881ad220af2/)
+# omarchy source: omacom/omarchy quattro e38c1d1289252d2adb96372eeac48d02e489c5b7 (https://raw.githubusercontent.com/omacom/omarchy/quattro/)
+
+$ journalctl -k -b --no-pager | grep -E 'picked fixup|autoconfig for|Internal Mic='
+Sep 17 19:04:33 omarchy kernel: snd_hda_codec_alc269 hdaudioC1D0: ALC3227: picked fixup  (pin match)
+Sep 17 19:04:33 omarchy kernel: snd_hda_codec_alc269 hdaudioC1D0: autoconfig for ALC3227: line_outs=1 (0x14/0x0/0x0/0x0/0x0) type:speaker
+Sep 17 19:04:33 omarchy kernel: snd_hda_codec_alc269 hdaudioC1D0:      Internal Mic=0x12
+
+# '(pin match)' is the point of this file: no SSID entry matched, so the
+# fixup came from the pin table (alc269_pin_fixup_tbl). The empty name is
+# the pre-existing printing of a pin-quirk name.
+
+$ lsmod | grep -E 'snd_hda_codec|snd_hda_intel'
+snd_hda_codec_alc269   172032  1
+snd_hda_codec_realtek_lib    65536  1 snd_hda_codec_alc269
+snd_hda_scodec_component    20480  1 snd_hda_codec_alc269
+snd_hda_codec_intelhdmi    28672  1
+snd_hda_codec_generic   114688  2 snd_hda_codec_realtek_lib,snd_hda_codec_alc269
+snd_hda_codec_hdmi     61440  1 snd_hda_codec_intelhdmi
+snd_hda_intel          73728  2
+snd_hda_codec         233472  6 snd_hda_codec_generic,snd_hda_codec_hdmi,snd_hda_intel,snd_hda_codec_realtek_lib,snd_hda_codec_alc269,snd_hda_codec_intelhdmi
+snd_hda_core          155648  7 snd_hda_codec_generic,snd_hda_codec_hdmi,snd_hda_intel,snd_hda_codec,snd_hda_codec_realtek_lib,snd_hda_codec_alc269,snd_hda_codec_intelhdmi
+snd_intel_dspcfg       49152  1 snd_hda_intel
+snd_hwdep              24576  2 snd_usb_audio,snd_hda_codec
+snd_pcm               225280  5 snd_hda_codec_hdmi,snd_hda_intel,snd_usb_audio,snd_hda_codec,snd_hda_core
+snd                   163840  22 snd_ctl_led,snd_hda_codec_generic,snd_seq,snd_seq_device,snd_hda_codec_hdmi,snd_hwdep,snd_hda_intel,snd_usb_audio,snd_usbmidi_lib,snd_hda_codec,snd_timer,snd_hda_codec_realtek_lib,snd_hda_codec_alc269,snd_ump,snd_pcm,snd_rawmidi
+
+$ modinfo -p snd_hda_intel | grep '^model'   (where a model= test would be applied)
+model:Use the given board model. (array of charp)

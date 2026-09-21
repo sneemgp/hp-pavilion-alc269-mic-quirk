@@ -1,0 +1,17 @@
+# Why the fixup can be tested without building a kernel: it has a model name
+# captured:   2026-09-20T19:19:42+01:00 on omarchy, kernel 7.2.5-3-omarchy
+# capture.sh: odd/omarchy-audio-upstream/evidence/capture.sh (re-runnable, read-only)
+# linux source: torvalds/linux master a10a019dd4c7c57bef6b8dda962c8881ad220af2 (https://raw.githubusercontent.com/torvalds/linux/a10a019dd4c7c57bef6b8dda962c8881ad220af2/)
+# omarchy source: omacom/omarchy quattro e38c1d1289252d2adb96372eeac48d02e489c5b7 (https://raw.githubusercontent.com/omacom/omarchy/quattro/)
+#   alc269.c sha256 539915daf333e7d8900d1f76eb116ef8addc8f9d0e9babb349bde49117abd979
+
+8499:	{.id = ALC269_FIXUP_LIMIT_INT_MIC_BOOST, .name = "limit-mic-boost"},
+
+== the model list is consulted before any SSID lookup ==
+8447:static const struct hda_model_fixup alc269_fixup_models[] = {
+
+# So: options snd-hda-intel model=limit-mic-boost selects
+# ALC269_FIXUP_LIMIT_INT_MIC_BOOST -- the plain limit, NOT the chained
+# mute-LED variant. In that configuration the SSID and pin tables are
+# skipped entirely (goto found), which is exactly why the kernel patch
+# must chain to the LED fixup instead of using the plain one.

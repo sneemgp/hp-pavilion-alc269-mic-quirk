@@ -1,0 +1,26 @@
+# Test C report -- ALC269_FIXUP_LIMIT_INT_MIC_BOOST via model=limit-mic-boost
+# 2026-09-20T20:20:08+01:00 on omarchy, kernel 7.2.5-3-omarchy, boot 2026-09-20 20:13:13
+# prediction: 'Internal Mic Boost' Limits: 0 - 1 (0 or 12 dB) plus a
+#             'picked fixup limit-mic-boost (model specified)' log line.
+#             The proc 'Amp-In caps' line is NOT part of the prediction: it
+#             reads parameters uncached, so it keeps showing the hardware
+#             range even on success (see the header).
+# prediction stated in: /home/hga/odd/omarchy-audio-upstream/test/mic-boost-fixup.sh (header) before this run
+
+codec file    : /proc/asound/card1/codec#0
+pin 0x12 caps :   Amp-In caps: ofs=0x00, nsteps=0x03, stepsize=0x2f, mute=0
+boost control :   Limits: 0 - 1
+drop-in       : present (/etc/modprobe.d/99-hp-pavilion-mic-boost-test.conf)
+would write   : model=,limit-mic-boost
+HDA slots     : 0000:00:03.0 card0 0000:00:1b.0 card1 
+
+verdict       : LIMITED -- prediction held: Internal Mic Boost offers 2 positions (0 and 12 dB) and the model name reached this codec
+
+# The fixup the driver picked, and whether the model name reached it:
+Sep 20 20:13:35 omarchy kernel: snd_hda_codec_alc269 hdaudioC1D0: ALC3227: picked fixup limit-mic-boost (model specified)
+# 'model specified' lines matching limit-mic-boost: 1
+
+The option reached this codec and the control is clamped. The proc line
+'Amp-In caps: ... nsteps=0x03' is expected to stay unchanged: the proc file
+reads parameters uncached (proc.c: 'always use noncached version'), and the
+fixup overrides the driver's cached parameter that the mixer control uses.

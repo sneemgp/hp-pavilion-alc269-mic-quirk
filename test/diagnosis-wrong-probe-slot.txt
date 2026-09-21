@@ -1,0 +1,100 @@
+# Diagnosis: test C attempt 1 failed, and what attempt 2 then exposed (2026-09-20)
+
+Two failures in a row, in the same test, for two different reasons — and neither was the fixup. Both are
+kept because both are the kind of mistake that reads as a hardware conclusion.
+
+## What happened
+
+`fixup-report-20260920-200308.txt`, after `install` (19:52) and a reboot (boot 19:52:56):
+
+```
+drop-in       : present (/etc/modprobe.d/99-hp-pavilion-mic-boost-test.conf)
+pin 0x12 caps :   Amp-In caps: ofs=0x00, nsteps=0x03, stepsize=0x2f, mute=0
+boost control :   Limits: 0 - 3
+verdict       : NOT LIMITED -- the full four-step 36 dB range is still exposed
+journal: snd_hda_codec_alc269 hdaudioC1D0: ALC3227: picked fixup  (pin match)
+```
+
+The drop-in was installed and the machine rebooted, and the ALC3227 still took the pin-table fixup. So
+the model name never reached that codec.
+
+## Why
+
+`snd-hda-intel`'s `model` parameter is an **array indexed by the driver's probe slot**, not by card
+number and not by codec. From `sound/hda/controllers/intel.c` at master
+`a10a019dd4c7c57bef6b8dda962c8881ad220af2` (sha256
+`ebc82a65f64864a88527e23604e0f3685e8bd646871698b5d78277655e2733f9`, fetched from
+`https://raw.githubusercontent.com/torvalds/linux/a10a019dd4c7c57bef6b8dda962c8881ad220af2/sound/hda/controllers/intel.c`):
+
+```c
+109: static char *model[SNDRV_CARDS];
+133: module_param_array(model, charp, NULL, 0444);
+2179:	dev = find_first_zero_bit(probed_devs, SNDRV_CARDS);
+1833:	err = azx_bus_init(chip, model[dev]);
+```
+
+The slot is the first free probe position, so every HDA controller that probes earlier consumes an index.
+This laptop has two, and the PCI addresses order them:
+
+| PCI address | card | codec | probe slot |
+| --- | --- | --- | --- |
+| `0000:00:03.0` | card0 `HDMI` | Intel Haswell HDMI | **0** |
+| `0000:00:1b.0` | card1 `PCH` | Realtek ALC3227 (`103c:2164`) | **1** |
+
+`model=limit-mic-boost` therefore set slot 0 — the HDMI controller, whose codec has no model called
+`limit-mic-boost` — and slot 1 stayed empty. A wrong slot is completely silent: no warning, no error, no
+log line, and the codec keeps whatever fixup the other tables gave it. That silence is what made this
+look like a fixup problem rather than a configuration one.
+
+## The correction
+
+```
+options snd-hda-intel model=,limit-mic-boost
+```
+
+The empty first element skips slot 0; the name lands on slot 1. `mic-boost-fixup.sh` now derives the
+slot from the HDA controllers actually present (ordered by PCI address, which is the order they
+enumerate and probe in) instead of assuming it, writes that line, and reports three things that make
+this class of mistake visible rather than silent:
+
+- `would write : model=,limit-mic-boost` and the slot table, in `status` and in every report;
+- the count of `picked fixup limit-mic-boost (model specified)` lines in the current boot — the driver
+  logs the model name it matched, so its presence is direct proof the option reached this codec;
+- a DIAGNOSIS block when the drop-in is installed but that count is zero.
+
+## Resolution (2026-09-20 20:20)
+
+The corrected option worked on the next attempt. Boot 20:13:13, `fixup-report-20260920-201757.txt`
+(as re-read with the corrected verdict in `fixup-report-20260920-202008.txt`):
+
+```
+journal       : ALC3227: picked fixup limit-mic-boost (model specified)   ← reached the codec
+boost control :   Limits: 0 - 1                                          ← the clamp is in effect
+pin 0x12 caps :   Amp-In caps: ofs=0x00, nsteps=0x03, stepsize=0x2f      ← expected, see below
+verdict       : LIMITED -- prediction held
+```
+
+That first "failure" after the slot was fixed was the **script's verdict, not the fixup**: the verdict
+keyed on the `/proc` codec dump, which reads parameters *uncached* — `sound/hda/common/proc.c:22`,
+`#define param_read(...) snd_hdac_read_parm_uncached(...)` under the comment "always use noncached
+version" — while `snd_hda_override_amp_caps()` installs the clamp in the driver's **cached** parameter
+via `snd_hdac_override_parm(AC_PAR_AMP_IN_CAP)`, and the mixer control is built from that. The control is
+therefore the observable; the proc line keeps showing the hardware range on purpose. The script's
+prediction, verdict and diagnosis were all changed accordingly, and the failure branch that would have
+blamed the fixup now only fires when the *control* stays at `0 - 3` with the model line present.
+
+Two lessons, both now encoded in the script rather than in prose:
+
+1. A module parameter that is an array is positional: derive the slot from the system, and make the test
+   say which slot it targeted.
+2. Pick the observable the change actually moves. Here the obvious-looking one (the codec dump) is the
+   one surface the fixup cannot change, because that file reads around the driver's cache by design.
+
+## What this does and does not change
+
+- The prediction (as corrected) held: `Limits: 0 - 3` -> `Limits: 0 - 1`, with the model-name log line.
+- **What remains unproven for the kernel patch:** that its SSID entry is selected (source argument only),
+  and that the chained mute-LED fixup it uses keeps `/sys/class/leds/hda::mute` alive (nothing exercises
+  the chain). The patch is not built or booted.
+- If a later run reports `Limits: 0 - 3` *while* the log shows the model line, the fixup is not doing what
+  the patch assumes, and that would falsify the patch's premise rather than its plumbing.

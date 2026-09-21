@@ -1,0 +1,13 @@
+# Machine identity used to justify the SSID quirk
+# captured:   2026-09-20T19:19:42+01:00 on omarchy, kernel 7.2.5-3-omarchy
+# capture.sh: odd/omarchy-audio-upstream/evidence/capture.sh (re-runnable, read-only)
+# linux source: torvalds/linux master a10a019dd4c7c57bef6b8dda962c8881ad220af2 (https://raw.githubusercontent.com/torvalds/linux/a10a019dd4c7c57bef6b8dda962c8881ad220af2/)
+# omarchy source: omacom/omarchy quattro e38c1d1289252d2adb96372eeac48d02e489c5b7 (https://raw.githubusercontent.com/omacom/omarchy/quattro/)
+
+sys_vendor       Hewlett-Packard
+product_name     HP Pavilion 15 Notebook PC
+product_family   103C_5335KV G=N L=CON B=HP S=PAV X=Null 
+product_version  0896100000304100000620100
+product_sku      F4B35EA#ABE
+board_name       2164
+bios_version     F.64

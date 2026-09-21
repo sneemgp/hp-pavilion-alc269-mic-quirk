@@ -1,0 +1,22 @@
+# Test C report -- ALC269_FIXUP_LIMIT_INT_MIC_BOOST via model=limit-mic-boost
+# 2026-09-20T20:17:57+01:00 on omarchy, kernel 7.2.5-3-omarchy, boot 2026-09-20 20:13:13
+# prediction: pin 0x12 nsteps=0x01 and 'Internal Mic Boost' Limits: 0 - 1
+# prediction stated in: /home/hga/odd/omarchy-audio-upstream/test/mic-boost-fixup.sh (header) before this run
+
+codec file    : /proc/asound/card1/codec#0
+pin 0x12 caps :   Amp-In caps: ofs=0x00, nsteps=0x03, stepsize=0x2f, mute=0
+boost control :   Limits: 0 - 1
+drop-in       : present (/etc/modprobe.d/99-hp-pavilion-mic-boost-test.conf)
+would write   : model=,limit-mic-boost
+HDA slots     : 0000:00:03.0 card0 0000:00:1b.0 card1 
+
+verdict       : NOT LIMITED -- the full four-step 36 dB range is still exposed
+
+# The fixup the driver picked, and whether the model name reached it:
+Sep 20 20:13:35 omarchy kernel: snd_hda_codec_alc269 hdaudioC1D0: ALC3227: picked fixup limit-mic-boost (model specified)
+# 'model specified' lines matching limit-mic-boost: 1
+
+The option DID reach this codec (1 'model specified' line(s)).
+If the caps are still nsteps=0x03 in that state, the fixup itself is not
+doing what the kernel patch assumes -- that would falsify the patch's
+premise, and it must be reported instead of worked around.

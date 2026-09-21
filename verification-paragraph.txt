@@ -1,0 +1,30 @@
+# The paragraph below is IN the commit message and in the generated patch
+# (`kernel/commit-message.txt`, `kernel/0001-*.patch`, verified by grep for
+# "picked fixup limit-mic-boost (model specified)"). It is kept here so the two
+# cannot drift: edit it here, copy it into `commit-message.txt`, then regenerate
+# with
+#   cd linux-hda && git commit --amend -F ../commit-message.txt
+#   git format-patch -1 --no-signature -o ..
+# If a later run of test C produces different numbers, replace the figures and
+# the report file name below and regenerate again.
+
+Tested on the affected machine by selecting the same fixup through the model
+string (snd-hda-intel.model), which bypasses the SSID and pin tables, with the
+driver confirming the selection:
+
+  snd_hda_codec_alc269 hdaudioC1D0: ALC3227: picked fixup limit-mic-boost (model specified)
+
+With that, Internal Mic Boost reports Limits 0 - 1 (0 or 12 dB) instead of 0 - 3
+(0 to 36 dB), so alc269_fixup_limit_int_mic_boost() clamps this codec's internal
+mic pin as intended. Note that /proc/asound/card1/codec#0 keeps printing the
+unclamped hardware caps (nsteps=0x03): that file reads codec parameters uncached
+by design, while the fixup overrides the driver's cached parameter that the
+control is built from.
+
+This does not by itself make the default capture volume sane -- the remaining
+12 dB on top of the +30 dB ADC gain is still hotter than this machine's usable
+operating point. It removes the two unusable steps from the hardware range, which
+is what a quirk of this class can do.
+
+Report: fixup-report-20260920-202008.txt (boot 2026-09-20 20:13:13), a re-read of
+fixup-report-20260920-201757.txt from the same boot with the corrected verdict.
