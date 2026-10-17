@@ -1,5 +1,7 @@
 # HP Pavilion 15 (103c:2164): missing internal-microphone boost limit
 
+[![Built with NaN](https://nan.builders/badge/built-with-nan-compact.svg)](https://nan.builders/?ref=built-with-nan)
+
 A one-line Linux kernel quirk for the HP Pavilion 15 Notebook PC (2014, Haswell-ULT) whose Realtek
 **ALC3227** codec exposes the full **36 dB** internal-microphone boost range on top of the +30 dB ADC
 capture gain. The kernel already has the fixup for this defect class; this machine's subsystem ID is
